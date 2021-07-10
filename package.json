@@ -1,7 +1,7 @@
 {
-  "name": "puppet-test",
+  "name": "puppeteer-fb-login",
   "version": "1.0.0",
-  "description": "",
+  "description": "A script for caching Facebook login cookies obtained by logging in through a headless browser",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
