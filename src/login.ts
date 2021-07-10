@@ -1,6 +1,5 @@
 import puppeteer from "puppeteer";
 import { Client } from "memjs";
-import { FACEBOOK_EMAIL, FACEBOOK_PASSWORD } from "./credentials";
 import { exec } from "child_process";
 
 const mem = Client.create(process.env.MEMCACHIER_SERVERS, {
@@ -27,6 +26,33 @@ const submitAndLoad = async (page: puppeteer.Page, submitOperation: Promise<void
         submitOperation,
         page.waitForNavigation({ waitUntil: "networkidle2" }),
     ]);
+};
+
+const getEmail = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        // get-email is a shell command I have configured
+        // to look up the current email stored on disk
+        exec("get-email", (err, stdout) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(stdout);
+        });
+    });
+};
+
+// Gets the existing stored password on disk
+const getExistingPassword = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        // get-password is a shell command I have configured
+        // to look up the current password stored on disk
+        exec("get-password", (err, stdout) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(stdout);
+        });
+    });
 };
 
 // Updates the stored password on disk and returns it
@@ -102,12 +128,14 @@ const login = async (page: puppeteer.Page) => {
     const emailField = "input[name=email]";
     await page.waitForSelector(emailField);
     await page.focus(emailField);
-    await page.keyboard.type(FACEBOOK_EMAIL);
+    const currentEmail = await getEmail();
+    await page.keyboard.type(currentEmail);
 
     const passwordField = "input[name=pass]";
     await page.waitForSelector(passwordField);
     await page.focus(passwordField);
-    await page.keyboard.type(FACEBOOK_PASSWORD);
+    const existingPassword = await getExistingPassword();
+    await page.keyboard.type(existingPassword);
 
     await submitAndLoad(page, page.keyboard.press("Enter"));
 
