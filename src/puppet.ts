@@ -8,8 +8,17 @@ const mem = Client.create(process.env.MEMCACHIER_SERVERS, {
     password: process.env.MEMCACHIER_PASSWORD
 });
 
+// A user agent that will get us a less secure version of the website
 const userAgent = "Mozilla/5.0 (Linux; Android 6.0.1; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Mobile Safari/537.36";
 
+// A default timeout for latent operations
+const defaultTimeout = 1000;
+
+// The main page we're using to log in
+const mainPageURL = "https://m.facebook.com";
+
+// Calls the given operation that kicks off a network request,
+// then waits for the page to finish loading
 const submitAndLoad = async (page: puppeteer.Page, submitOperation: Promise<void>) => {
     await Promise.all([
         submitOperation,
@@ -81,12 +90,12 @@ const setCookies = async (page: puppeteer.Page, cookies: BrowserCookie[]) => {
     page.setCookie(...cookies);
 };
 
-const defaultTimeout = 1000;
-
-(async () => {
+// Starts up the browser with the appropriate cookies and user agent and
+// navigates to the login page (returns this page and the associated browser)
+const setup = async () => {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
-    await page.goto("https://m.facebook.com");
+    await page.goto(mainPageURL);
 
     const data = await mem.get("appstate");
     const cookies: MemCookie[] = JSON.parse(data.value.toString());
@@ -98,7 +107,13 @@ const defaultTimeout = 1000;
 
     await page.setUserAgent(userAgent);
 
-    // Enter user & pass
+    return { browser, page };
+};
+
+// Logs in on the login page, resetting the password, approving any logins,
+// and dismissing any notices as needed
+const login = async (page: puppeteer.Page) => {
+    // Enter existing username & password
     const emailField = "input[name=email]";
     await page.waitForSelector(emailField);
     await page.focus(emailField);
@@ -120,6 +135,7 @@ const defaultTimeout = 1000;
         await approveButton.click();
     }
 
+    // Reset the password if we need to
     const newPasswordField = "input[name=password_new]";
     try {
         // If we haven't gotten flagged by fb recently, we won't need to
@@ -143,6 +159,17 @@ const defaultTimeout = 1000;
     } catch {
         // We don't care if this modal doesn't show up
     }
+};
+
+// Log in, resetting the password if necessary, and save
+// the cookies so the bot can pick them up on the next restart
+(async () => {
+    const { browser, page } = await setup();
+    await login(page);
+
+    // Navigate back to the main page to subvert fb's rate-limiting
+    // shenanigans even if you have a successful login
+    await page.goto(mainPageURL);
 
     const newCookies = await page.cookies();
     const storedCookies = browserToMemCookies(newCookies);
