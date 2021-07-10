@@ -131,7 +131,7 @@ const login = async (page: puppeteer.Page) => {
     const currentEmail = await getEmail();
     await page.keyboard.type(currentEmail);
 
-    const passwordField = "input[name=pass]";
+    const passwordField = "input[type=password]";
     await page.waitForSelector(passwordField);
     await page.focus(passwordField);
     const existingPassword = await getExistingPassword();
