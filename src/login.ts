@@ -40,30 +40,12 @@ const getNewPassword = (): Promise<string> => {
     });
 };
 
-interface BaseCookie {
-    value: string;
-    domain: string;
-    path: string;
-    expires: number;
-    size: number;
-    httpOnly: boolean;
-    secure: boolean;
-    session: boolean;
-    sameParty: boolean;
-    sourceScheme: string;
-    sourcePort: number;
-}
+// The following two functions are used to convert between cookies as stored
+// in the browser and cookies as stored in the db to interact with the API
+// See login.d.ts for details
 
-interface BrowserCookie extends BaseCookie {
-    name?: string;
-}
-
-interface MemCookie extends BaseCookie {
-    key?: string;
-}
-
-const memToBrowserCookies = (cookies: MemCookie[]): BrowserCookie[] => {
-    return cookies.map((cookie: MemCookie): BrowserCookie => {
+const apiToBrowserCookies = (cookies: APICookie[]): BrowserCookie[] => {
+    return cookies.map((cookie: APICookie): BrowserCookie => {
         const data = cookie.key;
         delete cookie["key"];
 
@@ -73,12 +55,12 @@ const memToBrowserCookies = (cookies: MemCookie[]): BrowserCookie[] => {
     });
 };
 
-const browserToMemCookies = (cookies: BrowserCookie[]): MemCookie[] => {
-    return cookies.map((cookie: BrowserCookie): MemCookie => {
+const browserToAPICookies = (cookies: BrowserCookie[]): APICookie[] => {
+    return cookies.map((cookie: BrowserCookie): APICookie => {
         const data = cookie.name;
         delete cookie["name"];
 
-        const newCookie = cookie as MemCookie;
+        const newCookie = cookie as APICookie;
         newCookie.key = data;
         return newCookie;
     });
@@ -98,11 +80,11 @@ const setup = async () => {
     await page.goto(mainPageURL);
 
     const data = await mem.get("appstate");
-    const cookies: MemCookie[] = JSON.parse(data.value.toString());
+    const cookies: APICookie[] = JSON.parse(data.value.toString());
 
     // Convert these back to valid cookies from their
     // facebook-chat-api representation
-    const browserCookies = memToBrowserCookies(cookies);
+    const browserCookies = apiToBrowserCookies(cookies);
     await setCookies(page, browserCookies);
 
     await page.setUserAgent(userAgent);
@@ -172,7 +154,7 @@ const login = async (page: puppeteer.Page) => {
     await page.goto(mainPageURL);
 
     const newCookies = await page.cookies();
-    const storedCookies = browserToMemCookies(newCookies);
+    const storedCookies = browserToAPICookies(newCookies);
     await mem.set("appstate", JSON.stringify(storedCookies), {});
 
     mem.close();
