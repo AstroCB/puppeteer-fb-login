@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "npm run build; node lib/puppet.js"
+    "start": "npm run build; node lib/login.js"
   },
   "author": "Cameron Bernhardt (AstroCB)",
   "license": "MIT",

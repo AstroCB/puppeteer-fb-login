@@ -17,6 +17,9 @@ const defaultTimeout = 1000;
 // The main page we're using to log in
 const mainPageURL = "https://m.facebook.com";
 
+// The collection we cache the login cookies in
+const dbCollection = "appstate";
+
 // Calls the given operation that kicks off a network request,
 // then waits for the page to finish loading
 const submitAndLoad = async (page: puppeteer.Page, submitOperation: Promise<void>) => {
@@ -75,11 +78,11 @@ const setCookies = async (page: puppeteer.Page, cookies: BrowserCookie[]) => {
 // Starts up the browser with the appropriate cookies and user agent and
 // navigates to the login page (returns this page and the associated browser)
 const setup = async () => {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.goto(mainPageURL);
 
-    const data = await mem.get("appstate");
+    const data = await mem.get(dbCollection);
     const cookies: APICookie[] = JSON.parse(data.value.toString());
 
     // Convert these back to valid cookies from their
@@ -155,7 +158,7 @@ const login = async (page: puppeteer.Page) => {
 
     const newCookies = await page.cookies();
     const storedCookies = browserToAPICookies(newCookies);
-    await mem.set("appstate", JSON.stringify(storedCookies), {});
+    await mem.set(dbCollection, JSON.stringify(storedCookies), {});
 
     mem.close();
     await browser.close();
