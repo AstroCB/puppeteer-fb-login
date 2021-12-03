@@ -108,8 +108,8 @@ const setup = async () => {
     const page = await browser.newPage();
     await page.goto(mainPageURL);
 
-    const data = await mem.get(dbCollection);
-    const cookies: APICookie[] = JSON.parse(data.value.toString());
+    const { value } = await mem.get(dbCollection);
+    const cookies: APICookie[] = value ? JSON.parse(value.toString()) : [];
 
     // Convert these back to valid cookies from their
     // facebook-chat-api representation
